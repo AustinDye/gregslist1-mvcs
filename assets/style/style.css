@@ -16,3 +16,7 @@
   display: grid;
   place-content: center;
 }
+
+img{
+  max-height: 17em;
+}

@@ -17,16 +17,21 @@ function _drawCars() {
   document.getElementById('listing-modal-form-slot').innerHTML = getCarform()
   document.getElementById('add-listing-modal-label').innerText = 'Add Car 🚗'
 }
-
+async function _getAllCars(){
+  try{
+    await carsService.getAllCars()
+  }catch(error) {
+    console.error(error)
+    Pop.toast(error.message, 'error')
+  }
+}
 export class CarsController {
-  //  Do I want to do anything on page load?
   constructor() {
     ProxyState.on('cars', _drawCars)
-    _drawCars()
+    _getAllCars()
   }
 
-  addCar() {
-    // DO THIS like always
+  async handleSubmit(id) {
     try {
       event.preventDefault()
       /**@type {HTMLFormElement} */
@@ -38,17 +43,21 @@ export class CarsController {
         price: formElem.price.value,
         color: formElem.color.value,
         description: formElem.description.value,
-        img: formElem.img.value,
+        imgUrl: formElem.imgUrl.value,
         year: formElem.year.value,
       }
-      carsService.addCar(formData)
+      if (id == 'undefined'){
+      await carsService.addCar(formData)
+      } else {
+        formData.id = id
+        await carsService.editCar(formData)
+      }
 
       formElem.reset()
       // @ts-ignore
       bootstrap.Modal.getOrCreateInstance(document.getElementById('add-listing-modal')).hide()
 
     } catch (error) {
-      // show this to the user
       console.error('[ADD_CAR_FORM_ERROR]', error)
       Pop.toast(error.message, 'error')
     }
@@ -58,5 +67,27 @@ export class CarsController {
     _drawCars()
     // @ts-ignore
     bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('sidenav')).hide()
+  }
+
+  openEditor(id) {
+    let car = ProxyState.cars.find(c => c.id == id)
+    if (!car) {
+      Pop.toast("invalid Id", "error")
+      return
+    }
+    document.getElementById('listing-modal-form-slot').innerHTML = getCarform(car)
+    // @ts-ignore
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('add-listing-modal')).show()
+  }
+
+  async removeCar(id) {
+    try {
+      if (await Pop.confirm())  { 
+         await carsService.removeCar(id)
+      }
+    } catch (error) {
+      console.error(error)
+      Pop.toast(error.message, "error")
+    }
   }
 }

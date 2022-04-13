@@ -10,6 +10,7 @@ function _drawHouses() {
   let houseCardsTemplate = ''
 
   ProxyState.houses.forEach(house => houseCardsTemplate += house.CardTemplate)
+
   document.getElementById('listings').innerHTML = `
     <div class="row houses">
       ${houseCardsTemplate}
@@ -20,14 +21,23 @@ function _drawHouses() {
   document.getElementById('add-listing-modal-label').innerText = 'Add House 🏠'
 }
 
+async function _getAllHouses(){
+  try {
+    await houseService.getAllHouses()
+  } catch (error) {
+    console.error(error)
+    Pop.toast(error.message, 'error')
+    
+  }
+}
+
 export class HousesController {
-  //  Do I want to do anything on page load?
   constructor() {
     ProxyState.on('houses', _drawHouses)
-    _drawHouses()
+    _getAllHouses()
   }
 
-  addHouse() {
+  async handleSubmit(id) {
     
     try {
       event.preventDefault()
@@ -35,25 +45,43 @@ export class HousesController {
       // @ts-ignore
       const formElem = event.target
       const formData = {
-        bed: formElem.bed.value,
-        bath: formElem.bath.value,
-        size: formElem.size.value,
-        img: formElem.img.value,
+        
+        bedrooms: formElem.bedrooms.value,
+        bathrooms: formElem.bathrooms.value,
+        levels: formElem.levels.value,
+        year: formElem.year.value,
+        imgUrl: formElem.imgUrl.value,
         price: formElem.price.value,
         description: formElem.description.value,
       
       }
-      houseService.addHouse(formData)
-      console.log({ formData })
+      if(id == 'undefined'){
+        await houseService.addHouse(formData)
+      }else {
+        formData.id = id
+        await houseService.editHouse(formData)
+      }
+      
+     
       formElem.reset()
-
       // @ts-ignore
       bootstrap.Modal.getOrCreateInstance(document.getElementById('add-listing-modal')).hide()
 
     } catch (error) {
       console.error('[ADD_HOUSE_FORM_ERROR]', error)
-      Pop.toast(error.message, 'error on house')
+      Pop.toast(error.message, 'error')
     }
+  }
+
+  openEditor(id)  {
+    let house = ProxyState.houses.find (h => h.id == id)
+    if (!house) {
+      Pop.toast("invalid id", "error")
+      return
+    }
+    document.getElementById('listing-modal-form-slot').innerHTML = getHouseForm(house)
+    // @ts-ignore
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('add-listing-modal')).show()
   }
 
   drawHouses() {
@@ -61,5 +89,17 @@ export class HousesController {
    
     // @ts-ignore
      bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('sidenav')).hide()
+  }
+
+  async removeHouse(id) {
+    try{
+      if (await Pop.confirm())  {
+        await houseService.removeHouse(id)
+      } 
+    }
+      catch (error){
+        console.error(error)
+        Pop.toast(error.message, "error")
+    }
   }
 }
